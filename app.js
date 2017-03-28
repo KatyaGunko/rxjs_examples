@@ -180,11 +180,48 @@ const reset = () => data;
  * 
  * do => function that runs outside the stream and dedicated to produce side effects
  */
+// const starters$ = Observable.merge(
+//     start$.mapTo(1000),
+//     half$.mapTo(500),
+//     quater$.mapTo(250)
+// )
+
+// const timer$ = starters$
+//     .switchMap((time) => Observable.merge(
+//         Observable.interval(time)
+//             .takeUntil(stop$).mapTo(inc), 
+//         reset$.mapTo(reset)))
+//     .startWith(data)
+//     .scan((acc, current) => current(acc));
+
+// Observable.combineLatest(
+//     timer$,
+//     input$,
+//     (timer, input) => ({count: timer.count, text: input})
+// )
+//     .do(x => console.log(x))
+//     .takeWhile(data => data.count <= 3)
+//     .filter(data => data.count === +data.text)
+//     .reduce((acc, curr) => acc + 1, 0)
+//     .subscribe(
+//         x => console.log(x),
+//         err => console.log(`Error! ${err}`),
+//         () => console.log('Complete!')
+//     );
+
+// ______________________________________________________________________
+
+/**
+ * withLatestFrom => doesn't blocking the compleating of the stream 
+ * as combineLatest did.
+ * 
+ * repeat => re-sibscribes to the event stream
+ */
 const starters$ = Observable.merge(
     start$.mapTo(1000),
     half$.mapTo(500),
     quater$.mapTo(250)
-)
+).share()
 
 const timer$ = starters$
     .switchMap((time) => Observable.merge(
@@ -194,19 +231,35 @@ const timer$ = starters$
     .startWith(data)
     .scan((acc, current) => current(acc));
 
-Observable.combineLatest(
-    timer$,
-    input$,
-    (timer, input) => ({count: timer.count, text: input})
-)
-    .do(x => console.log(x))
+const runningGame$ = timer$
     .takeWhile(data => data.count <= 3)
+    .withLatestFrom(
+        input$,
+        (timer, input) => ({count: timer.count, text: input})
+    )
+    .do(x => console.log(x))
+    .share();
+
+starters$
+    .subscribe(() => {
+        input.focus();
+        document.querySelector('#score').innerHTML = '';
+        input.value = '';
+    })
+
+runningGame$
+    .repeat()
+    .subscribe(() => input.value = '');
+
+runningGame$
     .filter(data => data.count === +data.text)
     .reduce((acc, curr) => acc + 1, 0)
+    .repeat()
     .subscribe(
-        x => console.log(x),
+        x => document.querySelector('#score').innerHTML = `
+            ${x}
+        `,
         err => console.log(`Error! ${err}`),
         () => console.log('Complete!')
     );
-
 
