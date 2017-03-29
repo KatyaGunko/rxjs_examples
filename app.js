@@ -5,7 +5,8 @@ const halfButton = document.querySelector('#half');
 const quaterButton = document.querySelector('#quater');
 const stopButton = document.querySelector('#stop');
 const resetButton = document.querySelector('#reset');
-
+const dblClickBtn = document.querySelector('#dbl-btn');
+const dblClickLabel = document.querySelector('#dblLabel');
 const input = document.querySelector('#input');
 
 const input$ = Observable.fromEvent(input, 'input').map(event => event.target.value);
@@ -18,6 +19,8 @@ const data = {count: 0};
 
 const inc = (acc) => ({count: acc.count + 1});
 const reset = () => data;
+
+const dblBtnClick$ = Observable.fromEvent(dblClickBtn, 'click');
 
 // Observable.fromEvent(startButton, 'click')
 //     .subscribe(event => console.log(event));
@@ -217,49 +220,70 @@ const reset = () => data;
  * 
  * repeat => re-sibscribes to the event stream
  */
-const starters$ = Observable.merge(
-    start$.mapTo(1000),
-    half$.mapTo(500),
-    quater$.mapTo(250)
-).share()
+// const starters$ = Observable.merge(
+//     start$.mapTo(1000),
+//     half$.mapTo(500),
+//     quater$.mapTo(250)
+// ).share()
 
-const timer$ = starters$
-    .switchMap((time) => Observable.merge(
-        Observable.interval(time)
-            .takeUntil(stop$).mapTo(inc), 
-        reset$.mapTo(reset)))
-    .startWith(data)
-    .scan((acc, current) => current(acc));
+// const timer$ = starters$
+//     .switchMap((time) => Observable.merge(
+//         Observable.interval(time)
+//             .takeUntil(stop$).mapTo(inc), 
+//         reset$.mapTo(reset)))
+//     .startWith(data)
+//     .scan((acc, current) => current(acc));
 
-const runningGame$ = timer$
-    .takeWhile(data => data.count <= 3)
-    .withLatestFrom(
-        input$,
-        (timer, input) => ({count: timer.count, text: input})
-    )
-    .do(x => console.log(x))
-    .share();
+// const runningGame$ = timer$
+//     .takeWhile(data => data.count <= 3)
+//     .withLatestFrom(
+//         input$,
+//         (timer, input) => ({count: timer.count, text: input})
+//     )
+//     .do(x => console.log(x))
+//     .share();
 
-starters$
-    .subscribe(() => {
-        input.focus();
-        document.querySelector('#score').innerHTML = '';
-        input.value = '';
-    })
+// starters$
+//     .subscribe(() => {
+//         input.focus();
+//         document.querySelector('#score').innerHTML = '';
+//         input.value = '';
+//     })
 
-runningGame$
-    .repeat()
-    .subscribe(() => input.value = '');
+// runningGame$
+//     .repeat()
+//     .subscribe(() => input.value = '');
 
-runningGame$
-    .filter(data => data.count === +data.text)
-    .reduce((acc, curr) => acc + 1, 0)
-    .repeat()
-    .subscribe(
-        x => document.querySelector('#score').innerHTML = `
-            ${x}
-        `,
-        err => console.log(`Error! ${err}`),
-        () => console.log('Complete!')
-    );
+// runningGame$
+//     .filter(data => data.count === +data.text)
+//     .reduce((acc, curr) => acc + 1, 0)
+//     .repeat()
+//     .subscribe(
+//         x => document.querySelector('#score').innerHTML = `
+//             ${x}
+//         `,
+//         err => console.log(`Error! ${err}`),
+//         () => console.log('Complete!')
+//     );
 
+// ______________________________________________________________________
+
+var button = document.querySelector('.button');
+var label = document.querySelector('h4');
+
+var clickStream = Rx.Observable.fromEvent(button, 'click');
+
+var doubleClickStream = clickStream
+  .buffer(() => clickStream.throttle(250))
+  .map(arr => arr.length)
+  .filter(len => len === 2);
+
+doubleClickStream.subscribe(event => {
+  label.textContent = 'double click';
+});
+
+doubleClickStream
+  .delay(1000)
+  .subscribe(suggestion => {
+    label.textContent = '-';
+  });
